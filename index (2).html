@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unspoken Hearts</title>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand&family=Open+Sans&display=swap" rel="stylesheet">
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAxzyUQZl8CdPQg0pUSv16HMmDijzIRaQA",
+      authDomain: "unspoken-hearts-app.firebaseapp.com",
+      projectId: "unspoken-hearts-app",
+      storageBucket: "unspoken-hearts-app.firebasestorage.app",
+      messagingSenderId: "124201928680",
+      appId: "1:124201928680:web:358e6ff1260ab9617d865d",
+      measurementId: "G-53H66XJ088"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+  </script>
+
+  <style>
+    body {
+      font-family: 'Quicksand', sans-serif;
+      background-color: #fdf6f0;
+      color: #333;
+      margin: 0;
+      padding: 0;
+    }
+
+    body.dark {
+      background-color: #1e1e1e;
+      color: #f5f5f5;
+    }
+
+    header {
+      background-color: #f4978e;
+      padding: 20px;
+      text-align: center;
+      color: white;
+      font-size: 24px;
+    }
+
+    .container {
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+      display: none;
+    }
+
+    .entry-form, .entry {
+      background-color: #fff;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+    }
+
+    body.dark .entry-form, body.dark .entry {
+      background-color: #2a2a2a;
+    }
+
+    .login-screen {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .entries {
+      margin-top: 20px;
+    }
+
+    button {
+      margin-top: 15px;
+      background-color: #f4978e;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    select, input[type="search"] {
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    💖 Unspoken Hearts 💖
+  </header>
+
+  <div class="login-screen" id="loginScreen">
+    <h2>Enter your shared password</h2>
+    <input type="password" id="passwordInput" placeholder="Password...">
+    <button onclick="checkPassword()">Enter</button>
+  </div>
+
+  <div class="container" id="diaryContainer">
+    <div style="margin-bottom: 20px;">
+      <button onclick="toggleDarkMode()">Toggle 🌙/☀️</button>
+      <select onchange="changeFont(this.value)">
+        <option value="Quicksand">Quicksand</option>
+        <option value="Open Sans">Open Sans</option>
+        <option value="sans-serif">Sans Serif</option>
+      </select>
+      <input type="search" id="searchInput" placeholder="Search..." oninput="searchEntries()">
+    </div>
+
+    <div class="entry-form">
+      <h3>Write Your Thought</h3>
+      <select id="entryType">
+        <option value="Love Letter">💌 Love Letter</option>
+        <option value="Rant">😤 Rant</option>
+        <option value="Unsaid Thought">🤐 Unsaid Thought</option>
+      </select>
+      <input type="text" id="entryTitle" placeholder="Title...">
+      <textarea id="entryText" rows="5" placeholder="What's on your mind?"></textarea>
+      <button onclick="addEntry()">Post</button>
+    </div>
+
+    <div class="entries" id="entries"></div>
+  </div>
+
+  <script>
+    const correctPassword = "usdiary2025";
+
+    function checkPassword() {
+      const input = document.getElementById("passwordInput").value;
+      if (input === correctPassword) {
+        document.getElementById("loginScreen").style.display = "none";
+        document.getElementById("diaryContainer").style.display = "block";
+        loadEntries();
+      } else {
+        alert("Wrong password. Please try again.");
+      }
+    }
+
+    function addEntry() {
+      const type = document.getElementById("entryType").value;
+      const title = document.getElementById("entryTitle").value.trim();
+      const text = document.getElementById("entryText").value.trim();
+
+      if (!title || !text) return alert("Please fill in both title and content.");
+
+      db.collection('diaryEntries').add({
+        type,
+        title,
+        text,
+        time: new Date().toISOString()
+      }).then(() => {
+        document.getElementById("entryTitle").value = "";
+        document.getElementById("entryText").value = "";
+      });
+    }
+
+    function loadEntries() {
+      db.collection('diaryEntries').orderBy('time', 'desc').onSnapshot(snapshot => {
+        const entries = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderEntries(entries);
+      });
+    }
+
+    function renderEntries(entries) {
+      const container = document.getElementById("entries");
+      container.innerHTML = "";
+      const searchQuery = document.getElementById("searchInput").value.toLowerCase();
+
+      entries.filter(entry => entry.title.toLowerCase().includes(searchQuery) || entry.text.toLowerCase().includes(searchQuery))
+        .forEach(entry => {
+          const div = document.createElement("div");
+          div.className = "entry";
+          div.innerHTML = `
+            <h4>${entry.type}: ${entry.title}</h4>
+            <small>${new Date(entry.time).toLocaleString()}</small>
+            <p>${entry.text.replace(/\n/g, "<br>")}</p>
+            <button onclick="editEntry('${entry.id}', '${entry.title.replace(/'/g, "\\'")}', '${entry.text.replace(/'/g, "\\'")}')">✏️ Edit</button>
+            <button onclick="deleteEntry('${entry.id}')">🗑️ Delete</button>
+          `;
+          container.appendChild(div);
+        });
+    }
+
+    function editEntry(id, currentTitle, currentText) {
+      const newTitle = prompt("Edit Title", currentTitle);
+      const newText = prompt("Edit Content", currentText);
+      if (newTitle && newText) {
+        db.collection('diaryEntries').doc(id).update({
+          title: newTitle,
+          text: newText
+        });
+      }
+    }
+
+    function deleteEntry(id) {
+      if (confirm("Are you sure you want to delete this entry?")) {
+        db.collection('diaryEntries').doc(id).delete();
+      }
+    }
+
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark");
+    }
+
+    function searchEntries() {
+      loadEntries();
+    }
+
+    function changeFont(font) {
+      document.body.style.fontFamily = font;
+    }
+
+    document.getElementById("passwordInput").addEventListener("keyup", function(e) {
+      if (e.key === "Enter") checkPassword();
+    });
+  </script>
+</body>
+</html>
