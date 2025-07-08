@@ -1,1 +1,100 @@
+<!-- Shared Diary Complete with All Features -->
 
+<!-- EmailJS SDK -->
+<script type="text/javascript" src="https://cdn.emailjs.com/dist/email.min.js"></script>
+<script type="text/javascript">
+(function() {
+  emailjs.init('QuFveASS-r2Favhcs');
+})();
+
+function sendMood(mood) {
+  const templateParams = {
+    mood: mood
+  };
+
+  emailjs.send('service_g01f5f1', 'template_vzvlohc', templateParams)
+    .then(function(response) {
+       alert("Your partner has been notified: " + mood);
+    }, function(error) {
+       alert("Failed to send mood. Please try again.");
+    });
+}
+
+// Firestore initialization assumed as db
+
+function editEntry(id, currentTitle, currentText) {
+  const newTitle = prompt("Edit Title", currentTitle);
+  const newText = prompt("Edit Content", currentText);
+  if (newTitle && newText) {
+    db.collection('diaryEntries').doc(id).update({
+      title: newTitle,
+      text: newText
+    }).then(() => {
+      loadEntries();
+    });
+  }
+}
+
+function deleteEntry(id) {
+  if (confirm("Are you sure you want to delete this entry?")) {
+    db.collection('diaryEntries').doc(id).delete().then(() => {
+      loadEntries();
+    });
+  }
+}
+
+// Photo Dump
+function addToPhotoDump(imageDataUrl) {
+  const photoDumpContainer = document.getElementById('photoDump');
+  const img = document.createElement('img');
+  img.src = imageDataUrl;
+  img.style.maxWidth = '100px';
+  img.style.margin = '5px';
+  photoDumpContainer.appendChild(img);
+}
+
+// Attach Image and Preview
+function handleImagePreview(event, previewId) {
+  const file = event.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById(previewId).src = e.target.result;
+      addToPhotoDump(e.target.result);
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+// Reply to Entry
+function replyToEntry(parentId) {
+  const replyText = prompt("Your reply:");
+  const sender = prompt("Who are you? Type 'girl' or 'boy'");
+  if (replyText && sender) {
+    db.collection('diaryEntries').add({
+      parentId: parentId,
+      text: replyText,
+      sender: sender,
+      time: new Date().toLocaleString()
+    }).then(() => {
+      loadEntries();
+    });
+  }
+}
+
+// Render Entries with Color Based on Sender
+function renderEntry(entry) {
+  const entryDiv = document.createElement('div');
+  entryDiv.style.padding = '10px';
+  entryDiv.style.margin = '10px 0';
+  entryDiv.style.borderRadius = '10px';
+  entryDiv.style.backgroundColor = entry.sender === 'girl' ? '#ffe6e6' : '#e6f0ff';
+  entryDiv.innerHTML = `<strong>${entry.title || ''}</strong><p>${entry.text}</p><small>${entry.time}</small>`;
+  return entryDiv;
+}
+
+// Example calls:
+// <button onclick="sendMood('Happy 😊')">😊 Happy</button>
+// <input type="file" onchange="handleImagePreview(event, 'previewImg')">
+// <div id="photoDump"></div>
+// Add sender selection in new post or reply
